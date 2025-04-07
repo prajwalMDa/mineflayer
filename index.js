@@ -12,17 +12,14 @@ bot.once('spawn', () => {
   bot.chat('I am AFK!');
 });
 
-// Prevent bot from getting kicked for idling
 setInterval(() => {
   bot.setControlState('jump', true);
   setTimeout(() => bot.setControlState('jump', false), 500);
 }, 10000);
 
-// Reconnect if disconnected
 bot.on('end', () => {
   console.log('Bot disconnected. Reconnecting...');
   setTimeout(() => {
     require('child_process').fork(__filename);
   }, 5000);
 });
-
