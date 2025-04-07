@@ -1,5 +1,4 @@
 const mineflayer = require('mineflayer');
-
 const bot = mineflayer.createBot({
   host: 'Nether_Forge.aternos.me',
   port: 22452,
@@ -64,6 +63,19 @@ bot.once('spawn', () => {
       }
     }
   }, 30000);
+});
+
+// Listen to chat messages
+bot.on('chat', (username, message) => {
+  if (username === bot.username) return; // ignore its own messages
+
+  if (message === '!stop') {
+    bot.chat('Stopping now... Bye!');
+    setTimeout(() => {
+      bot.quit(); // Disconnects from server
+      process.exit(); // Stops the bot process (even in Railway)
+    }, 1000);
+  }
 });
 
 // Reconnect on disconnect
