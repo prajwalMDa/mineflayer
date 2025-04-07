@@ -7,37 +7,63 @@ const bot = mineflayer.createBot({
   version: false,
 });
 
-let jumpInterval;
+let jumpInterval = null;
+
+function startJumping() {
+  if (!jumpInterval) {
+    bot.chat('Starting AFK jumps!');
+    jumpInterval = setInterval(() => {
+      bot.setControlState('jump', true);
+      setTimeout(() => bot.setControlState('jump', false), 500);
+    }, 10000);
+  }
+}
+
+function stopJumping() {
+  if (jumpInterval) {
+    clearInterval(jumpInterval);
+    jumpInterval = null;
+    bot.chat("Stopping jump to try sleeping...");
+  }
+}
 
 bot.once('spawn', () => {
   console.log('Bot has joined the server!');
   bot.chat('I am AFK!');
-
-  // Start jumping every 10 seconds
-  jumpInterval = setInterval(() => {
-    bot.setControlState('jump', true);
-    setTimeout(() => bot.setControlState('jump', false), 500);
-  }, 10000);
+  startJumping();
 
   // Check time every 30 seconds
   setInterval(() => {
     const time = bot.time.timeOfDay;
 
-    // Evening time in Minecraft: 12000 to 13000 (or even 14000+)
     if (time >= 12000 && time <= 23000) {
-      bot.chat('It\'s evening, going to sleep...');
-      clearInterval(jumpInterval); // Stop jumping
+      stopJumping();
+
+      const bed = bot.findBlock({
+        matching: block => bot.isABed(block),
+        maxDistance: 10
+      });
+
+      if (bed) {
+        bot.sleep(bed).then(() => {
+          bot.chat('Good night! I am sleeping...');
+        }).catch(err => {
+          bot.chat("Couldn't sleep: " + err.message);
+        });
+      } else {
+        bot.chat("No bed nearby to sleep.");
+      }
     } else {
-      // Restart jump if it’s not already running
-      if (!jumpInterval) {
-        bot.chat('Good morning! Resuming AFK jump!');
-        jumpInterval = setInterval(() => {
-          bot.setControlState('jump', true);
-          setTimeout(() => bot.setControlState('jump', false), 500);
-        }, 10000);
+      if (bot.isSleeping) {
+        bot.wake().then(() => {
+          bot.chat('Good morning!');
+          startJumping();
+        });
+      } else {
+        startJumping();
       }
     }
-  }, 30000); // Check every 30 seconds
+  }, 30000);
 });
 
 // Reconnect on disconnect
