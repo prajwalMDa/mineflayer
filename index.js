@@ -1,4 +1,5 @@
 const mineflayer = require('mineflayer');
+
 const bot = mineflayer.createBot({
   host: 'Nether_Forge.aternos.me',
   port: 22452,
@@ -31,7 +32,41 @@ bot.once('spawn', () => {
   bot.chat('I am AFK!');
   startJumping();
 
-  // Check time every 30 seconds
+  // Staring + creepy messages
+  const saidTo = new Set();
+  const creepyMessages = [
+    "Don't come closer...",
+    "I'm watching you.",
+    "You shouldn't be here.",
+    "Too close... back off.",
+    "You're not safe here.",
+    "Why are you staring at me?"
+  ];
+
+  setInterval(() => {
+    const player = Object.values(bot.players).find(p => {
+      if (!p.entity) return false;
+      const dist = bot.entity.position.distanceTo(p.entity.position);
+      return p.username !== bot.username && dist < 6;
+    });
+
+    if (player && player.entity) {
+      bot.lookAt(player.entity.position.offset(0, 1.6, 0));
+
+      if (!saidTo.has(player.username)) {
+        const msg = creepyMessages[Math.floor(Math.random() * creepyMessages.length)];
+        bot.chat(msg);
+        saidTo.add(player.username);
+      }
+    }
+  }, 1000);
+
+  // Reset memory every 30 seconds
+  setInterval(() => {
+    saidTo.clear();
+  }, 30000);
+
+  // Check time every 30 seconds for bed
   setInterval(() => {
     const time = bot.time.timeOfDay;
 
@@ -67,13 +102,13 @@ bot.once('spawn', () => {
 
 // Listen to chat messages
 bot.on('chat', (username, message) => {
-  if (username === bot.username) return; // ignore its own messages
+  if (username === bot.username) return;
 
   if (message === '!stop') {
     bot.chat('Stopping now... Bye!');
     setTimeout(() => {
-      bot.quit(); // Disconnects from server
-      process.exit(); // Stops the bot process (even in Railway)
+      bot.quit();
+      process.exit();
     }, 1000);
   }
 });
