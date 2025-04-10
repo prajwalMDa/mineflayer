@@ -4,7 +4,7 @@ const bot = mineflayer.createBot({
   host: 'Nether_Forge.aternos.me',
   port: 22452,
   username: 'Prajwals_AFK_BOT',
-  version: false,
+  version: "1.20.4"
 });
 
 let jumpInterval = null;
