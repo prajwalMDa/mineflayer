@@ -5,7 +5,7 @@ function createAFKBot() {
     host: 'Nether_Forge.aternos.me',
     port: 22452,
     username: 'Prajwals_AFK_BOT',
-    version: '1.20.4' // or false
+    version: false // Auto-detect version
   });
 
   let jumpInterval = null;
@@ -107,12 +107,17 @@ function createAFKBot() {
   bot.on('end', () => {
     console.log('Bot disconnected. Reconnecting in 5s...');
     setTimeout(() => {
-      createAFKBot(); // Reconnect by re-creating the bot
+      createAFKBot();
     }, 5000);
   });
 
+  // Error logging
   bot.on('error', (err) => {
-    console.log('Bot error:', err.message);
+    console.log('[ERROR]', err.message);
+  });
+
+  bot.on('kicked', (reason) => {
+    console.log('[KICKED]', reason);
   });
 }
 
