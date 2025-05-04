@@ -1,11 +1,16 @@
 const mineflayer = require('mineflayer');
 
-function createAFKBot() {
+const usernames = ['Prajwals_AFK_BOT_1', 'Prajwals_AFK_BOT_2', 'Prajwals_AFK_BOT_3'];
+let currentIndex = 0;
+let currentBot = null;
+let reconnectTimeout = null;
+
+function startBot(index) {
   const bot = mineflayer.createBot({
     host: 'Nether_Forge.aternos.me',
     port: 22452,
-    username: 'Prajwals_AFK_BOT',
-    version: false // Auto-detect version
+    username: usernames[index],
+    version: false
   });
 
   let walking = false;
@@ -16,15 +21,11 @@ function createAFKBot() {
     walking = true;
 
     const directions = ['forward', 'back', 'left', 'right'];
-
     walkTimer = setInterval(() => {
-      // Clear all directions first
       directions.forEach(dir => bot.setControlState(dir, false));
-
-      // Pick a new random direction
       const dir = directions[Math.floor(Math.random() * directions.length)];
       bot.setControlState(dir, true);
-    }, 3000); // Change direction every 3 seconds
+    }, 3000);
   }
 
   function stopWalking() {
@@ -34,34 +35,31 @@ function createAFKBot() {
     ['forward', 'back', 'left', 'right'].forEach(d => bot.setControlState(d, false));
   }
 
-  bot.once('spawn', () => {
-    console.log('Bot has joined the server!');
-    bot.chat('AFK bot is here!');
-    startConstantWalking();
-
-    // Sleep logic
+  function handleSleeping() {
     setInterval(() => {
       const time = bot.time.timeOfDay;
+
       if (time >= 12000 && time <= 23000) {
         stopWalking();
         const bed = bot.findBlock({
           matching: block => bot.isABed(block),
-          maxDistance: 10
+          maxDistance: 20 // increased from 10 to 20
         });
 
         if (bed) {
           bot.sleep(bed).then(() => {
-            bot.chat('Good night!');
+            bot.chat('Sleeping...');
           }).catch(err => {
             bot.chat("Couldn't sleep: " + err.message);
           });
         } else {
-          bot.chat("No bed found.");
+          bot.chat("No bed found within 20 blocks.");
         }
+
       } else {
         if (bot.isSleeping) {
           bot.wake().then(() => {
-            bot.chat('Woke up, resuming walk!');
+            bot.chat('Woke up, back to walking!');
             startConstantWalking();
           });
         } else {
@@ -69,6 +67,46 @@ function createAFKBot() {
         }
       }
     }, 30000);
+  }
+
+  bot.once('spawn', () => {
+    console.log(`Bot ${bot.username} has joined.`);
+    bot.chat(`Hello! I am ${bot.username}`);
+    startConstantWalking();
+    handleSleeping();
+
+    if (currentBot && currentBot !== bot) {
+      console.log(`Disconnecting old bot: ${currentBot.username}`);
+      currentBot.quit();
+    }
+
+    currentBot = bot;
+
+    setTimeout(() => {
+      const nextIndex = (index + 1) % usernames.length;
+      startBot(nextIndex);
+    }, 30 * 60 * 1000); // 30 minutes
+  });
+
+  bot.on('end', () => {
+    console.log(`${bot.username} disconnected.`);
+    if (currentBot === bot) currentBot = null;
+
+    if (!reconnectTimeout) {
+      reconnectTimeout = setTimeout(() => {
+        console.log(`Reconnecting bot ${bot.username}...`);
+        reconnectTimeout = null;
+        startBot(index);
+      }, 10000);
+    }
+  });
+
+  bot.on('error', err => {
+    console.log(`[ERROR] ${bot.username}:`, err.message);
+  });
+
+  bot.on('kicked', reason => {
+    console.log(`[KICKED] ${bot.username}:`, reason);
   });
 
   bot.on('chat', (username, message) => {
@@ -79,19 +117,6 @@ function createAFKBot() {
       process.exit();
     }
   });
-
-  bot.on('end', () => {
-    console.log('Bot disconnected. Reconnecting in 5s...');
-    setTimeout(createAFKBot, 5000);
-  });
-
-  bot.on('error', err => {
-    console.log('[ERROR]', err.message);
-  });
-
-  bot.on('kicked', reason => {
-    console.log('[KICKED]', reason);
-  });
 }
 
-createAFKBot();
+startBot(currentIndex);
