@@ -1,9 +1,8 @@
 const mineflayer = require('mineflayer');
 
-const usernames = ['Prajwals_AFK_BOT_1', 'Prajwals_AFK_BOT_2', 'Prajwals_AFK_BOT_3'];
+const usernames = ['prazzu_bot_1', 'prazzu_bot_2', 'prazzu_bot_3'];
 let currentIndex = 0;
 let currentBot = null;
-let reconnectTimeout = null;
 
 function startBot(index) {
   const bot = mineflayer.createBot({
@@ -25,7 +24,7 @@ function startBot(index) {
       directions.forEach(dir => bot.setControlState(dir, false));
       const dir = directions[Math.floor(Math.random() * directions.length)];
       bot.setControlState(dir, true);
-    }, 3000);
+    }, 3000); // Change direction every 3 seconds
   }
 
   function stopWalking() {
@@ -39,11 +38,11 @@ function startBot(index) {
     setInterval(() => {
       const time = bot.time.timeOfDay;
 
-      if (time >= 12000 && time <= 23000) {
+      if (time >= 12000 && time <= 23000) { // Nighttime (12:00 - 23:00)
         stopWalking();
         const bed = bot.findBlock({
           matching: block => bot.isABed(block),
-          maxDistance: 20 // increased from 10 to 20
+          maxDistance: 20 // Increased from 10 to 20
         });
 
         if (bed) {
@@ -55,7 +54,6 @@ function startBot(index) {
         } else {
           bot.chat("No bed found within 20 blocks.");
         }
-
       } else {
         if (bot.isSleeping) {
           bot.wake().then(() => {
@@ -66,7 +64,7 @@ function startBot(index) {
           startConstantWalking();
         }
       }
-    }, 30000);
+    }, 30000); // Check every 30 seconds
   }
 
   bot.once('spawn', () => {
@@ -82,9 +80,10 @@ function startBot(index) {
 
     currentBot = bot;
 
+    // Set the next bot to join after 30 minutes
     setTimeout(() => {
       const nextIndex = (index + 1) % usernames.length;
-      startBot(nextIndex);
+      startBot(nextIndex); // Start the next bot
     }, 30 * 60 * 1000); // 30 minutes
   });
 
@@ -92,13 +91,9 @@ function startBot(index) {
     console.log(`${bot.username} disconnected.`);
     if (currentBot === bot) currentBot = null;
 
-    if (!reconnectTimeout) {
-      reconnectTimeout = setTimeout(() => {
-        console.log(`Reconnecting bot ${bot.username}...`);
-        reconnectTimeout = null;
-        startBot(index);
-      }, 10000);
-    }
+    // When the current bot disconnects, immediately start the next bot
+    const nextIndex = (index + 1) % usernames.length;
+    startBot(nextIndex);
   });
 
   bot.on('error', err => {
