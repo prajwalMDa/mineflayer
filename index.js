@@ -1,6 +1,6 @@
 const mineflayer = require('mineflayer');
 
-const usernames = ['prazzu_bot_1', 'prazzu_bot_2', 'prazzu_bot_3'];
+const usernames = ['prazzu_bot_no1', 'prazzu_bot_no2', 'prazzu_bot_no3'];
 let currentIndex = 0;
 let currentBot = null;
 
@@ -69,6 +69,9 @@ function startBot(index) {
 
   bot.once('spawn', () => {
     console.log(`Bot ${bot.username} has joined.`);
+    
+    bot.chat('/login 1984');  // <-- Added this line for auto-login, replace yourpassword
+    
     bot.chat(`Hello! I am ${bot.username}`);
     startConstantWalking();
     handleSleeping();
