@@ -1,9 +1,13 @@
 {
   "name": "afk-bot",
   "version": "1.0.0",
+  "description": "A simple Mineflayer AFK bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
+  },
+  "engines": {
+    "node": "18.x"
   },
   "dependencies": {
     "mineflayer": "^4.16.0"
