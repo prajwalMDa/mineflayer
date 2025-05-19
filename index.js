@@ -6,10 +6,10 @@ let currentBot = null;
 
 function startBot(index) {
   const bot = mineflayer.createBot({
-    host: 'Nether_Forge.aternos.me',
-    port: 22452,
+    host: 'Nether_Forge.aternos.me', // Replace with your server IP
+    port: 22452,                      // Replace with your port
     username: usernames[index],
-    version: false
+    version: false                   // Set your version manually if needed
   });
 
   let walking = false;
@@ -30,7 +30,7 @@ function startBot(index) {
   bot.once('spawn', () => {
     console.log(`Bot ${bot.username} has joined.`);
 
-    bot.chat('/login 1984');  // Replace with your password
+    bot.chat('/login 1984');  // Replace with your password if needed
 
     bot.chat(`Hello! I am ${bot.username}`);
     startConstantWalking();
@@ -46,7 +46,7 @@ function startBot(index) {
     setTimeout(() => {
       const nextIndex = (index + 1) % usernames.length;
       startBot(nextIndex);
-    }, 30 * 60 * 1000);
+    }, 30 * 60 * 1000); // 30 minutes
   });
 
   bot.on('end', () => {
@@ -54,15 +54,26 @@ function startBot(index) {
     if (currentBot === bot) currentBot = null;
 
     const nextIndex = (index + 1) % usernames.length;
-    startBot(nextIndex);
+
+    // Delay reconnect to avoid "connection throttled"
+    setTimeout(() => {
+      startBot(nextIndex);
+    }, 10000); // 10 seconds
+  });
+
+  bot.on('kicked', reason => {
+    console.log(`[KICKED] ${bot.username}:`, reason.toString());
+
+    const nextIndex = (index + 1) % usernames.length;
+
+    // Delay reconnect to avoid throttling
+    setTimeout(() => {
+      startBot(nextIndex);
+    }, 10000); // 10 seconds
   });
 
   bot.on('error', err => {
     console.log(`[ERROR] ${bot.username}:`, err.message);
-  });
-
-  bot.on('kicked', reason => {
-    console.log(`[KICKED] ${bot.username}:`, reason);
   });
 
   bot.on('chat', (username, message) => {
@@ -77,8 +88,12 @@ function startBot(index) {
     if (message === '!change') {
       bot.chat('Changing bot now...');
       bot.quit();
+
       const nextIndex = (index + 1) % usernames.length;
-      startBot(nextIndex);
+
+      setTimeout(() => {
+        startBot(nextIndex);
+      }, 2000); // Slight delay before changing
     }
   });
 }
