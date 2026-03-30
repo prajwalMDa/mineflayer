@@ -34,7 +34,7 @@ function startBot(index) {
   bot.once('spawn', () => {
     console.log(`✅ ${bot.username} joined`);
 
-    bot.chat('/login 1984');
+    bot.chat('/login 198419');
 
     setTimeout(() => {
       bot.chat(`Hello! I am ${bot.username}`);
