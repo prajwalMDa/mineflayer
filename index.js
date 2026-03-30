@@ -1,18 +1,23 @@
+const http = require('http');
 const mineflayer = require('mineflayer');
 
-const usernames = ['prazzu_bot_no1', 'prazzu_bot_no2', 'prazzu_bot_no3'];
+// Keep Render alive
+http.createServer((req, res) => {
+  res.end("Bot is running");
+}).listen(3000);
+
+const usernames = ['Bot1', 'Bot2', 'Bot3']; // simple names only
 let currentIndex = 0;
 let currentBot = null;
-let restarting = false;
 
 function startBot(index) {
-  if (restarting) return;
-  restarting = true;
+  console.log(`🚀 Starting bot: ${usernames[index]}`);
 
   const bot = mineflayer.createBot({
     host: 'Nether_Forgers.aternos.me',
-    port: 64102,
-    username: usernames[index]
+    port: 25565, // ✅ FIXED (Java port)
+    username: usernames[index],
+    version: '1.21.1' // ✅ SET YOUR VERSION
   });
 
   let walkTimer = null;
@@ -23,118 +28,81 @@ function startBot(index) {
       directions.forEach(dir => bot.setControlState(dir, false));
       const dir = directions[Math.floor(Math.random() * directions.length)];
       bot.setControlState(dir, true);
-    }, 3000);
-  }
-
-  function cleanUp() {
-    if (walkTimer) clearInterval(walkTimer);
-    if (bot) {
-      ['forward','back','left','right'].forEach(d => bot.setControlState(d, false));
-    }
+    }, 4000);
   }
 
   bot.once('spawn', () => {
     console.log(`✅ ${bot.username} joined`);
 
     bot.chat('/login 1984');
-    bot.chat(`Hello! I am ${bot.username}`);
 
-    startWalking();
+    setTimeout(() => {
+      bot.chat(`Hello! I am ${bot.username}`);
+      startWalking();
+    }, 3000);
 
+    // Remove old bot safely
     if (currentBot && currentBot !== bot) {
+      console.log(`❌ Removing old bot: ${currentBot.username}`);
       currentBot.quit();
     }
 
     currentBot = bot;
-    restarting = false;
 
-    // Rotate bot every 30 min
+    // Rotate after 30 mins
     setTimeout(() => {
-      switchBot(index);
+      rotateBot(index);
     }, 30 * 60 * 1000);
   });
 
-  function switchBot(index) {
-    cleanUp();
-    if (currentBot) currentBot.quit();
-
+  function rotateBot(index) {
     const nextIndex = (index + 1) % usernames.length;
+    console.log(`🔄 Switching to ${usernames[nextIndex]}`);
+
+    if (walkTimer) clearInterval(walkTimer);
+
+    bot.quit();
 
     setTimeout(() => {
-      restarting = false;
       startBot(nextIndex);
-    }, 10000);
+    }, 20000); // ✅ 20 sec delay (prevents throttling)
   }
 
   bot.on('end', () => {
     console.log(`❌ ${bot.username} disconnected`);
-    cleanUp();
-    switchBot(index);
-  });
 
-  bot.on('kicked', reason => {
-    console.log(`🚫 ${bot.username} kicked:`, reason.toString());
-    cleanUp();
-    switchBot(index);
-  });
+    if (walkTimer) clearInterval(walkTimer);
 
-  bot.on('error', err => {
-    console.log(`⚠️ ${bot.username} error:`, err.message);
-  });
-
-  bot.on('chat', (username, message) => {
-    if (username === bot.username) return;
-
-    if (message === '!stop') {
-      cleanUp();
-      bot.quit();
-      process.exit();
-    }
-
-    if (message === '!change') {
-      cleanUp();
-      switchBot(index);
-    }
-  });
-}
-
-startBot(currentIndex);      startBot(nextIndex);
-    }, 10000); // 10 seconds
-  });
-
-  bot.on('kicked', reason => {
-    console.log(`[KICKED] ${bot.username}:`, reason.toString());
-
-    const nextIndex = (index + 1) % usernames.length;
-
-    // Delay reconnect to avoid throttling
+    // Retry safely
     setTimeout(() => {
-      startBot(nextIndex);
-    }, 10000); // 10 seconds
+      startBot(index);
+    }, 30000); // ✅ 30 sec delay (IMPORTANT)
+  });
+
+  bot.on('kicked', reason => {
+    console.log(`🚫 ${bot.username} kicked: ${reason}`);
+
+    if (walkTimer) clearInterval(walkTimer);
+
+    setTimeout(() => {
+      startBot(index);
+    }, 30000);
   });
 
   bot.on('error', err => {
-    console.log(`[ERROR] ${bot.username}:`, err.message);
+    console.log(`⚠️ Error (${bot.username}):`, err.message);
   });
 
   bot.on('chat', (username, message) => {
     if (username === bot.username) return;
 
     if (message === '!stop') {
-      bot.chat('Stopping now...');
-      bot.quit();
+      bot.chat('Stopping...');
       process.exit();
     }
 
     if (message === '!change') {
-      bot.chat('Changing bot now...');
-      bot.quit();
-
-      const nextIndex = (index + 1) % usernames.length;
-
-      setTimeout(() => {
-        startBot(nextIndex);
-      }, 2000); // Slight delay before changing
+      rotateBot(index);
     }
   });
 }
