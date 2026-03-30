@@ -6,7 +6,7 @@ http.createServer((req, res) => {
   res.end("Bot is running");
 }).listen(3000);
 
-const usernames = ['Bot1', 'Bot2', 'Bot3']; // simple names only
+const usernames = ['Ramesh', 'Suresh', 'Mukesh']; // simple names only
 let currentIndex = 0;
 let currentBot = null;
 
@@ -15,7 +15,7 @@ function startBot(index) {
 
   const bot = mineflayer.createBot({
     host: 'Nether_Forgers.aternos.me',
-    port: 25565, // ✅ FIXED (Java port)
+    port: 64102, // ✅ FIXED (Java port)
     username: usernames[index],
     version: '1.21.1' // ✅ SET YOUR VERSION
   });
