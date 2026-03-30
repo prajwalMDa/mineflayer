@@ -10,6 +10,7 @@ http.createServer((req, res) => {
 const usernames = ['Ramesh', 'Suresh'];
 let currentIndex = 0;
 let currentBot = null;
+let isRotating = false;
 
 function startBot(index) {
   console.log(`🚀 Starting bot: ${usernames[index]}`);
@@ -32,21 +33,50 @@ function startBot(index) {
         const dir = directions[Math.floor(Math.random() * directions.length)];
         bot.setControlState(dir, true);
       } catch (e) {}
-    }, 5000); // ⬅️ slower (prevents invalid movement kick)
+    }, 5000);
   }
 
   bot.once('spawn', () => {
     console.log(`✅ ${bot.username} joined`);
 
-    // ⏳ Wait before login (VERY IMPORTANT)
+    // ⏳ Login delay
     setTimeout(() => {
       bot.chat('/login 198419');
     }, 2000);
 
-    // ⏳ Wait before movement (prevents "Invalid move packet")
+    // ⏳ After login actions
     setTimeout(() => {
       bot.chat(`Hello! I am ${bot.username}`);
-      startWalking();
+
+      // 🛏️ Try to sleep
+      const bed = bot.findBlock({
+        matching: block => block.name.includes('bed'),
+        maxDistance: 5
+      });
+
+      if (bed) {
+        bot.sleep(bed).then(() => {
+          console.log(`😴 ${bot.username} is sleeping`);
+
+          // Wake after 1 min
+          setTimeout(() => {
+            if (bot.isSleeping) {
+              bot.wake().then(() => {
+                console.log(`🌅 ${bot.username} woke up`);
+                startWalking();
+              });
+            }
+          }, 60000);
+
+        }).catch(err => {
+          console.log(`⚠️ Sleep failed: ${err.message}`);
+          startWalking();
+        });
+      } else {
+        console.log("❌ No bed nearby, walking instead");
+        startWalking();
+      }
+
     }, 8000);
 
     // Remove old bot
@@ -57,13 +87,15 @@ function startBot(index) {
 
     currentBot = bot;
 
-    // 🔄 Rotate after 30 min
+    // 🔄 Rotate every 25 min (Aternos safe)
     setTimeout(() => {
       rotateBot(index);
-    }, 30 * 60 * 1000);
+    }, 25 * 60 * 1000);
   });
 
   function rotateBot(index) {
+    isRotating = true;
+
     const nextIndex = (index + 1) % usernames.length;
     console.log(`🔄 Switching to ${usernames[nextIndex]}`);
 
@@ -72,8 +104,9 @@ function startBot(index) {
     bot.quit();
 
     setTimeout(() => {
+      isRotating = false;
       startBot(nextIndex);
-    }, 30000); // ⬅️ more delay = no throttling
+    }, 30000);
   }
 
   bot.on('end', () => {
@@ -81,16 +114,20 @@ function startBot(index) {
 
     if (walkTimer) clearInterval(walkTimer);
 
-    // ❗ Prevent spam reconnect loop
+    if (isRotating) return;
+
     setTimeout(() => {
+      console.log("🔁 Reconnecting...");
       startBot(index);
-    }, 60000); // ⬅️ 60 sec (IMPORTANT FIX)
+    }, 60000);
   });
 
   bot.on('kicked', reason => {
     console.log(`🚫 ${bot.username} kicked: ${reason}`);
 
     if (walkTimer) clearInterval(walkTimer);
+
+    if (isRotating) return;
 
     setTimeout(() => {
       startBot(index);
