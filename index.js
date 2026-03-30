@@ -6,8 +6,8 @@ let currentBot = null;
 
 function startBot(index) {
   const bot = mineflayer.createBot({
-    host: 'Nether_Forge.aternos.me', // Replace with your server IP
-    port: 22452,                      // Replace with your port
+    host: 'Nether_Forgers.aternos.me', // Replace with your server IP
+    port: 64102,                      // Replace with your port
     username: usernames[index],
     version: false                   // Set your version manually if needed
   });
