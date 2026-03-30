@@ -6,7 +6,7 @@ http.createServer((req, res) => {
   res.end("Bot is running");
 }).listen(3000);
 
-const usernames = ['Ramesh', 'Suresh', 'Mukesh']; // simple names only
+const usernames = ['Ramesh', 'Suresh']; // simple names only
 let currentIndex = 0;
 let currentBot = null;
 
