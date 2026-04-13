@@ -1,119 +1,120 @@
-const http = require('http');
 const mineflayer = require('mineflayer');
 
-http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end("Bot is running");
-}).listen(3000);
+let spawned = false;
 
-const usernames = ['Ramesh', 'Suresh'];
-let currentIndex = 0;
-let currentBot = null;
-let isRotating = false;
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-function startBot(index) {
-  console.log(`🚀 Starting bot: ${usernames[index]}`);
+function startBot() {
+  console.log('🚀 Starting Ramesh...');
 
   const bot = mineflayer.createBot({
     host: 'Nether_Forgers.aternos.me',
     port: 64102,
-    username: usernames[index],
-    version: '1.21.1'
+    username: 'Ramesh',
+    version: '1.21.1',
+    hideErrors: true,
+    keepAlive: true
   });
 
-  let walkTimer = null;
-  let rotateTimer = null;
-  let spawned = false;
+  let timers = [];
 
-  function startWalking() {
-    const directions = ['forward', 'back', 'left', 'right'];
-    walkTimer = setInterval(() => {
-      try {
-        // Stop all directions first
-        directions.forEach(dir => bot.setControlState(dir, false));
-        // Pick random direction
-        const dir = directions[Math.floor(Math.random() * directions.length)];
-        bot.setControlState(dir, true);
-        // Stop after 1 second
-        setTimeout(() => {
-          try { bot.setControlState(dir, false); } catch(e) {}
-        }, 1000);
-      } catch (e) {}
-    }, 30000); // move every 30 seconds, not 5
+  function addTimer(fn, delay, repeat = false) {
+    const t = repeat ? setInterval(fn, delay) : setTimeout(fn, delay);
+    timers.push({ t, repeat });
   }
 
   function cleanup() {
-    if (walkTimer) { clearInterval(walkTimer); walkTimer = null; }
-    if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
+    timers.forEach(({ t, repeat }) => repeat ? clearInterval(t) : clearTimeout(t));
+    timers = [];
+    spawned = false;
   }
 
-  function rotateBot() {
-    if (isRotating) return;
-    isRotating = true;
-    const nextIndex = (currentIndex + 1) % usernames.length;
-    console.log(`🔄 Switching to ${usernames[nextIndex]}`);
-    cleanup();
-    try { bot.quit(); } catch(e) {}
+  function randomWalk() {
+    const dirs = ['forward', 'back', 'left', 'right'];
+    dirs.forEach(d => { try { bot.setControlState(d, false); } catch(e){} });
+    const dir = dirs[rand(0, 3)];
+    try { bot.setControlState(dir, true); } catch(e) {}
     setTimeout(() => {
-      currentIndex = nextIndex;
-      isRotating = false;
-      startBot(nextIndex);
-    }, 15000); // wait 15s before next bot joins
+      try { bot.setControlState(dir, false); } catch(e) {}
+    }, rand(800, 2000));
+  }
+
+  function randomJump() {
+    try {
+      bot.setControlState('jump', true);
+      setTimeout(() => {
+        try { bot.setControlState('jump', false); } catch(e) {}
+      }, 400);
+    } catch(e) {}
+  }
+
+  function randomLook() {
+    try {
+      bot.look(
+        (Math.random() * 2 - 1) * Math.PI,
+        (Math.random() - 0.5) * (Math.PI / 3),
+        true
+      );
+    } catch(e) {}
   }
 
   bot.once('spawn', () => {
     if (spawned) return;
     spawned = true;
-    console.log(`✅ ${bot.username} joined`);
+    console.log('✅ Ramesh joined');
 
-    // Login silently (only if your server uses AuthMe plugin)
-    setTimeout(() => {
+    // Login
+    addTimer(() => {
       try { bot.chat('/login 198419'); } catch(e) {}
-    }, 3000);
+    }, rand(2000, 4000));
 
-    // Start anti-AFK movement after 15s
-    setTimeout(() => {
-      startWalking();
-    }, 15000);
+    // Anti AFK
+    addTimer(randomWalk, rand(25000, 40000), true);
+    addTimer(randomLook, rand(15000, 25000), true);
+    addTimer(randomJump, rand(3, 5) * 60 * 1000, true);
 
-    // Rotate every 25 minutes
-    rotateTimer = setTimeout(() => {
-      rotateBot();
-    }, 25 * 60 * 1000);
+    // Disconnect after 30 minutes then reconnect after 20 seconds
+    addTimer(() => {
+      console.log('🔄 30 min up — disconnecting...');
+      cleanup();
+      try { bot.quit(); } catch(e) {}
+      setTimeout(() => startBot(), 20000);
+    }, 30 * 60 * 1000);
+  });
 
-    currentBot = bot;
+  // AFK detection
+  bot.on('message', (jsonMsg) => {
+    const msg = jsonMsg.toString().toLowerCase();
+    if (msg.includes('afk') || msg.includes('idle')) {
+      randomWalk();
+      randomJump();
+    }
+  });
+
+  bot.on('chat', (username, message) => {
+    if (username === 'Ramesh') return;
+    if (message === '!stop') process.exit();
   });
 
   bot.on('end', (reason) => {
-    console.log(`❌ ${bot.username} disconnected: ${reason}`);
+    console.log(`❌ Ramesh ended: ${reason}`);
     cleanup();
-    if (isRotating) return;
-    // Reconnect after 60s
-    setTimeout(() => startBot(currentIndex), 60000);
+    setTimeout(() => startBot(), 20000);
   });
 
   bot.on('kicked', (reason) => {
-    console.log(`🚫 ${bot.username} kicked:`, JSON.stringify(reason));
+    console.log(`🚫 Ramesh kicked: ${JSON.stringify(reason)}`);
     cleanup();
-    if (isRotating) return;
-    setTimeout(() => startBot(currentIndex), 60000);
+    setTimeout(() => startBot(), 20000);
   });
 
   bot.on('error', (err) => {
-    console.log(`⚠️ Error (${bot.username}):`, err.message);
+    console.log(`⚠️ Error: ${err.message}`);
     cleanup();
-  });
-
-  // Only respond to !commands, nothing else
-  bot.on('chat', (username, message) => {
-    if (username === bot.username) return;
-    if (message === '!stop') process.exit();
-    if (message === '!change') rotateBot();
-    if (message === '!status') {
-      // silent log only, no chat response
-      console.log(`📊 Status check by ${username}`);
-    }
+    setTimeout(() => startBot(), 20000);
   });
 }
 
-startBot(currentIndex);
+startBot();
