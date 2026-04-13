@@ -19,6 +19,7 @@ function startBot() {
   });
 
   let timers = [];
+  let isReconnecting = false;
 
   function addTimer(fn, delay, repeat = false) {
     const t = repeat ? setInterval(fn, delay) : setTimeout(fn, delay);
@@ -29,6 +30,14 @@ function startBot() {
     timers.forEach(({ t, repeat }) => repeat ? clearInterval(t) : clearTimeout(t));
     timers = [];
     spawned = false;
+  }
+
+  function reconnect(delay) {
+    if (isReconnecting) return;
+    isReconnecting = true;
+    cleanup();
+    console.log(`🔁 Reconnecting in ${delay / 1000}s...`);
+    setTimeout(() => startBot(), delay);
   }
 
   function randomWalk() {
@@ -74,17 +83,9 @@ function startBot() {
     addTimer(randomWalk, rand(25000, 40000), true);
     addTimer(randomLook, rand(15000, 25000), true);
     addTimer(randomJump, rand(3, 5) * 60 * 1000, true);
-
-    // Disconnect after 30 minutes then reconnect after 20 seconds
-    addTimer(() => {
-      console.log('🔄 30 min up — disconnecting...');
-      cleanup();
-      try { bot.quit(); } catch(e) {}
-      setTimeout(() => startBot(), 20000);
-    }, 30 * 60 * 1000);
   });
 
-  // AFK detection
+  // AFK detection only
   bot.on('message', (jsonMsg) => {
     const msg = jsonMsg.toString().toLowerCase();
     if (msg.includes('afk') || msg.includes('idle')) {
@@ -93,27 +94,19 @@ function startBot() {
     }
   });
 
-  bot.on('chat', (username, message) => {
-    if (username === 'Ramesh') return;
-    if (message === '!stop') process.exit();
-  });
-
   bot.on('end', (reason) => {
     console.log(`❌ Ramesh ended: ${reason}`);
-    cleanup();
-    setTimeout(() => startBot(), 20000);
+    reconnect(20000);
   });
 
   bot.on('kicked', (reason) => {
     console.log(`🚫 Ramesh kicked: ${JSON.stringify(reason)}`);
-    cleanup();
-    setTimeout(() => startBot(), 20000);
+    reconnect(20000);
   });
 
   bot.on('error', (err) => {
     console.log(`⚠️ Error: ${err.message}`);
-    cleanup();
-    setTimeout(() => startBot(), 20000);
+    reconnect(20000);
   });
 }
 
