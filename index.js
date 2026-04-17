@@ -93,7 +93,7 @@ function startBot() {
       try { bot.chat('/login 198419'); } catch(e) {}
     }, rand(2000, 4000));
 
-    addTimer(randomWalk, rand(8000, 15000), true);
+    addTimer(randomWalk, rand(8002, 15000), true);
     addTimer(randomLook, rand(5000, 10000), true);
     addTimer(randomJump, rand(20000, 35000), true);
     addTimer(randomSneak, rand(30000, 50000), true);
